@@ -26,6 +26,8 @@ Make sure recipe_urls.txt contains one URL per line.
 # Once the project is setup run the following command to scrap transform recipes
 python pipeline_recipes.py
 
+```
+
 This will:
 
 Scrape all recipes listed in recipe_urls.txt
