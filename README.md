@@ -38,7 +38,10 @@ Add summary text
 
 Save the final data to recipes_with_summary.json
 
+
+
 📦 Project Structure
+```bash
 ├── recipe_urls.txt              # List of URLs to scrape
 ├── all_recipes.json             # Raw scraped recipes
 ├── recipes_with_summary.json    # Final processed file with summary_text
@@ -46,6 +49,7 @@ Save the final data to recipes_with_summary.json
 ├── recipe_cache_layer.py        # FastAPI + RoBERTa + in-memory cache
 ├── requirements.txt             # All dependencies
 └── README.md
+```
 
 ✅ Example Conditions to Test
 pcos
