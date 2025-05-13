@@ -1,0 +1,26 @@
+# Bytecode and cache
+__pycache__/
+*.py[cod]
+*.pkl
+
+# Environments
+.env
+.venv/
+venv/
+
+# System files
+.DS_Store
+
+# Transformers cache
+~/.cache/huggingface
+*.bin
+
+# Datasets
+*.json
+*.csv
+
+# Output
+*.log
+
+scrape-recipies.py
+text_generation.py
