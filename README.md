@@ -51,17 +51,81 @@ Save the final data to recipes_with_summary.json
 └── README.md
 ```
 
-✅ Example Conditions to Test
-pcos
+---
 
-diabetes
+## 🧠 Run the API Server
 
-gluten intolerance
+```bash
+uvicorn recipe_cache_layer:app --reload
+```
 
-high blood pressure
+Then open in your browser or Postman:
 
-lactose intolerance
+```
+GET http://localhost:8000/get_recipes?conditions=pcos&conditions=diabetes
+```
 
-vegan
+---
 
-keto
+## 📄 Example API Response
+
+```json
+[
+  {
+    "title": "Saltimbocca Rezept",
+    "ingredients": ["2 Schweineschnitzel(\u00e0 180 g)", "Pfeffer", ...],
+    "instructions": ["Schnitzel dritteln...", "Schnitzel nebeneinander...", ...],
+    "nutrition": {
+      "calories": 426,
+      "proteinContent": 49,
+      "fatContent": 21,
+      "carbohydrateContent": 7,
+      "@type": "NutritionInformation"
+    },
+    "image_url": "https://...jpg",
+    "source_link": "https://...saltimbocca",
+    "summary_text": "Ingredients: ... Nutrition: ...",
+    "classification_score": 0.89,
+    "classification_label": "This recipe is suitable for someone with pcos and diabetes"
+  },
+  ...
+]
+```
+
+---
+
+## 📦 API Endpoint Summary
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/get_recipes` | GET | Returns recipes suitable for one or more medical impairments. Use `conditions` as repeated query params. |
+
+### Example:
+```
+GET /get_recipes?conditions=pcos&conditions=diabetes
+```
+
+---
+
+## 📆 Project Structure
+
+```
+├── recipe_urls.txt              # List of URLs to scrape
+├── all_recipes.json             # Raw scraped recipes
+├── recipes_with_summary.json    # Final processed file with summary_text
+├── pipeline_recipes.py          # End-to-end scraper + summary generator
+├── recipe_cache_layer.py        # FastAPI + RoBERTa + in-memory cache
+├── requirements.txt             # All dependencies
+└── README.md
+```
+
+---
+
+## ✅ Example Conditions to Test
+- pcos
+- diabetes
+- gluten intolerance
+- high blood pressure
+- lactose intolerance
+- vegan
+- keto
