@@ -21,6 +21,15 @@ def scrape_single_recipe(url):
             image_url = img_tag["src"]
             if image_url.startswith("./") or not image_url.startswith("http"):
                 image_url = "https://www.essen-und-trinken.de" + image_url[1:]
+                
+    # ✅ Extract duration from known div structure
+    duration_text = None
+    cook_time_div = soup.find("div", class_="recipe-meta__item--cook-time")
+    if cook_time_div:
+        duration_span = cook_time_div.find("span", class_="u-typo--recipe-info-text")
+        if duration_span:
+            duration_text = duration_span.get_text(strip=True)
+
 
     amounts = soup.select("x-beautify-number.recipe-ingredients__amount")
     labels = soup.select("p.recipe-ingredients__label")
@@ -52,7 +61,8 @@ def scrape_single_recipe(url):
         "instructions": instructions,
         "nutrition": nutrition,
         "image_url": image_url,
-        "source_link": url
+        "source_link": url,
+        "duration" : duration_text
     }
 
 
