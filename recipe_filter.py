@@ -68,6 +68,15 @@ def classify_recipe(text: str, conditions: List[str]) -> dict:
 def get_recipes(conditions: List[str] = Query(..., description="List of medical impairments")):
     matching = []
     for recipe in tqdm(all_recipes, desc="Classifying recipes"):
+        if (
+            not recipe.get("title") or
+            recipe["title"].strip().lower() == "die gewünschte seite ist leider nicht vorhanden" or
+            not recipe.get("ingredients") or
+            not recipe.get("instructions") or
+            not recipe.get("nutrition")
+        ):
+            continue
+        
         text = recipe.get("summary_text", "")
         if not text:
             continue
@@ -80,3 +89,7 @@ def get_recipes(conditions: List[str] = Query(..., description="List of medical 
 
     matching.sort(key=lambda r: r["classification_score"], reverse=True)
     return matching
+    # return JSONResponse(content={
+    #     "count": len(matching),
+    #     "recipes": matching
+    # }
