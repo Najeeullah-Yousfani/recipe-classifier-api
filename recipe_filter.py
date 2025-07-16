@@ -9,7 +9,7 @@ import hashlib
 # ------------------ CONFIG ------------------
 RECIPE_FILE = "recipes_with_summary.json"
 MODEL_NAME = "facebook/bart-large-mnli"
-SCORE_THRESHOLD = 0.5
+SCORE_THRESHOLD = 0.0
 
 # ------------------ LOAD DATA ------------------
 with open(RECIPE_FILE, "r", encoding="utf-8") as f:
@@ -20,7 +20,8 @@ classifier = pipeline("zero-shot-classification", model=MODEL_NAME)
 
 # ------------------ INIT APP & CACHE ------------------
 app = FastAPI()
-cache: Dict[str, Dict[str, Any]] = {}  # key: hash, value: classification result
+classification_cache: Dict[str, Dict[str, Any]] = {}
+diet_cache: Dict[str, str] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,35 +38,67 @@ def hash_key(text: str, conditions: List[str]) -> str:
 
 def classify_recipe(text: str, conditions: List[str]) -> dict:
     cache_key = hash_key(text, conditions)
-    if cache_key in cache:
-        return cache[cache_key]
+    if cache_key in classification_cache:
+        return classification_cache[cache_key]
 
     if not conditions:
         result = {"label": "Not suitable", "score": 0.0, "combined_condition": ""}
     else:
-        if len(conditions) == 1:
-            combined = conditions[0]
+        suitable_count = 0
+        total_score = 0.0
+        for condition in conditions:
+            labels = [
+                f"This recipe is suitable for someone with {condition}",
+                f"This recipe is not suitable for someone with {condition}"
+            ]
+            result_raw = classifier(text, labels)
+            label = result_raw["labels"][0]
+            score = result_raw["scores"][0]
+            if label.startswith("This recipe is suitable"):
+                suitable_count += 1
+                total_score += score
+
+        if suitable_count == len(conditions):
+            result = {
+                "label": "This recipe is suitable",
+                "score": total_score / len(conditions),
+                "combined_condition": ", ".join(conditions)
+            }
         else:
-            combined = ", ".join(conditions[:-1]) + f", and {conditions[-1]}"
+            result = {
+                "label": "Not suitable",
+                "score": 0.0,
+                "combined_condition": ", ".join(conditions)
+            }
 
-        labels = [
-            f"This recipe is suitable for someone with {combined}",
-            f"This recipe is not suitable for someone with {combined}"
-        ]
-
-        result_raw = classifier(text, labels)
-        result = {
-            "label": result_raw["labels"][0],
-            "score": result_raw["scores"][0],
-            "combined_condition": combined
-        }
-
-    cache[cache_key] = result
+    classification_cache[cache_key] = result
     return result
+
+def classify_diet(text: str, diet: str) -> bool:
+    # Supported diets: "vegetarian", "non-vegetarian"
+    if not diet:
+        return True  # No filtering
+    
+    labels = [
+        f"This recipe is vegetarian",
+        f"This recipe is non-vegetarian"
+    ]
+    result = classifier(text, labels)
+    predicted_label = result["labels"][0].lower()
+
+    if diet == "vegetarian" and "vegetarian" in predicted_label:
+        return True
+    if diet == "non-vegetarian" and "non-vegetarian" in predicted_label:
+        return True
+    return False
+
 
 # ------------------ API ROUTE ------------------
 @app.get("/get_recipes", response_model=List[Dict[str, Any]])
-def get_recipes(conditions: List[str] = Query(..., description="List of medical impairments")):
+def get_recipes(
+    conditions: List[str] = Query(..., description="List of medical impairments"),
+    diet: str = Query(None, description="Diet preference: vegetarian, non-vegetarian")
+):
     matching = []
     for recipe in tqdm(all_recipes, desc="Classifying recipes"):
         if (
@@ -76,16 +109,19 @@ def get_recipes(conditions: List[str] = Query(..., description="List of medical 
             not recipe.get("nutrition")
         ):
             continue
-        
+
         text = recipe.get("summary_text", "")
         if not text:
             continue
+
         result = classify_recipe(text, conditions)
 
         if result["label"].lower().startswith("this recipe is suitable") and result["score"] >= SCORE_THRESHOLD:
-            recipe["classification_score"] = result["score"]
-            recipe["classification_label"] = result["label"]
-            matching.append(recipe)
+            # Check diet suitability here
+            if classify_diet(text, diet):
+                recipe["classification_score"] = result["score"]
+                recipe["classification_label"] = result["label"]
+                matching.append(recipe)
 
     matching.sort(key=lambda r: r["classification_score"], reverse=True)
     return matching
